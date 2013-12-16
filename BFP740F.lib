@@ -1,43 +1,95 @@
-.MODEL  BFP740F   NPN
-+              IS = 384.4e-18
-+              BF = 1.1e3
-+              NF = 1.018
-+             VAF = 400
-+             IKF = 512.1e-3
-+             ISE = 4.296e-15
-+              NE = 1.586
-+              BR = 62
-+              NR = 1
-+             VAR = 1.28
-+             IKR = 5e-3
-+             ISC = 3.85e-15
-+              NC = 1.5
-+              RB = 3.23
-+             IRB = 10
-+             RBM = 1.69
-+              RE = 90e-3
-+              RC = 6.88
-+              EG = 1.11
-+             XTI = 910e-3
-+             CJE = 220e-15
-+             VJE = 590e-3
-+             MJE = 70e-3
-+              TF = 2.1e-12
-+             XTF =  3
-+             VTF = 1.32
-+             ITF = 290e-3
-+             PTF = 100e-3
-+             CJC = 99.5e-15
-+             VJC = 550e-3
-+ MJC = 152e-3
-+ XCJC = 10e-3
-+ TR = 13e-12
-+ CJS = 79.7e-15
-+ VJS = 570e-3
-+ MJS = 180e-3
-+ XTB = -2.2
-+ FC = 950e-3
-+ AF = 1
-+ KF = 0
-+ TNOM = 25
-.ENDS
+***************************************************************				
+* Infineon Technologies	AG			
+* GUMMEL-POON Transistor MODEL IN SPICE 2G6 SYNTAX				
+* BFP740F Model in TSFP-4-1				
+* VALID UP TO 6 GHZ				
+* October 2005				
+***************************************************************				
+* BFP740F				
+*				
+*.OPTION TNOM = 25, GMIN = 1.00E-12				
+*				
+* 	    BFP740F	C	B	E
+.SUBCKT   BFP740F	1	2	3	
+X1 22 11 33 2 1 3	TSFP-4-1_BFP740F			
+X2 11 22 33 		CHIP_BFP740F		
+.ENDS BFP740F				
+**************************************************************					
+* Chip parasitics BFP740F					
+*					
+* 		CHIP_BFP740F	C   B   E		
+.SUBCKT	CHIP_BFP740F	1   2   3			
+Q1	10	20	30	4	M_BFP740F
+CBEC	20	30			1.00E-13
+CBCC	20	10			1.00E-15
+LBC	2	20			1.00E-10
+LCC	1	10			2.00E-10
+LEC	3	30			2.00E-11
+REC	3	30			2.00E+00
+CES	3	33			3.40E-13
+CBS	2	22			3.90E-14
+CCS	1	11			7.50E-14
+RBS	4	22			3.50E+03
+RCS	4	11			1.65E+03
+RES	4	33			9.00E+01
+.ENDS	CHIP_BFP740F				
+**************************************************************					
+* Package Model TSFP-4-1 for BFP740F					
+*					
+*	  TSFP-4-1_BFP740F Bi  Ci  Ei  Bo  Co  Eo				
+.SUBCKT TSFP-4-1_BFP740F  1   2   3  10  20  30					
+LBB	1	10	4.11E-10		
+LCB	2	20	6.96E-10		
+LEB	3	30	2.10E-11		
+CCEO	20	30	1.77E-13		
+CBEO	30	10	9.20E-14		
+CCEI	2	3	2.17E-13		
+CBEI	3	1	5.20E-14		
+.ENDS TSFP-4-1_BFP740F					
+**************************************************************											
+* BJT Model TSFP-4-1 for BFP740F											
+*											
+.MODEL	M_BFP740F NPN(										
++	IS	=	3.84E-16	
++	BF	=	1.1E+03	
++	NF	=	1.018
++	VAF	=	400		
++	IKF	=	5.12E-01	
++	ISE	=	4.269E-15
++	NE	=	1.586		
++	BR	=	62		
++	NR	=	1
++	VAR	=	1.28		
++	IKR	=	5.00E-03	
++	ISC	=	3.85E-15
++	NC	=	1.5		
++	RBM	=	1.69		
++	IRB	=	10
++	RB	=	3.23
++	IRB	=	10
++	RBM	=	1.69		
++	RE	=	9.00E-02	
++	RC	=	6.88
++	CJE	=	2.2E-13	
++	VJE	=	5.90E-01	
++	MJE	=	7.00E-02
++	TF	=	2.10E-12	
++	XTF	=	3		
++	VTF	=	1.32
++	ITF	=	2.90E-01	
++	PTF	=	1.00E-01	
++	CJC	=	9.95E-14
++	VJC	=	5.50E-01	
++	MJC	=	1.52E-01	
++	XCJC	=	1.00E-02
++	TR	=	1.30E-11	
++	CJS	=	7.97E-14	
++	VJS	=	5.70E-01
++	MJS	=	1.80E-01	
++	XTB	=	-2.2		
++	AF 	=	1
++	XTI	=	9.10E-01	
++	FC	=	9.59E-01	
++	EG	=	1.11
++	KF 	=	0		
++	TNOM	=	25)
