@@ -3,7 +3,8 @@ use strict;
 use warnings;
 use Thread::Pool::Simple;
 use File::Path qw(make_path rmtree);
-use File::Copy;
+use File::Copy 'cp';
+use Cwd;
 
 &main;
 
@@ -14,18 +15,34 @@ sub main {
                   {
                    'thresh_slow_rel' => [20],
                    'thresh_fast_rel' => [20],
-                   'amplitude' => [100, 200],
-                   'risetime' => [1, 4, 8],
-                   'falltime' => [1, 4, 8 ]
+                   'amplitude' => [300],
+                   'risetime' => [4, 8],
+                   'falltime' => [1]
                   });
+  run_ltspice($workdir);
 }
+
+
+sub run_ltspice {
+  my $workdir = shift;
+  my $olddir = getcwd();
+  my $cmd = './ltspice.sh'; # runs by default padiwa-amps.asc...
+  chdir $workdir;
+  system($cmd) == 0
+     or die "system $cmd failed: $?";
+  chdir $olddir;
+}
+
 
 sub prepare_workdir {
   my $workdir = shift;
   rmtree($workdir);
   make_path($workdir);
   while(my $lib = <*.lib>) {
-    copy $lib,"$workdir/$lib" or die "can't copy $lib: $!";
+    cp $lib,"$workdir/$lib" or die "can't copy $lib: $!";
+  }
+  for(qw(ltspice.sh padiwa-amps.plt)) {
+    cp $_, "$workdir/$_" or die "can't copy $_: $!";
   }
 }
 
