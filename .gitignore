@@ -2,4 +2,6 @@
 *.raw
 *.plt
 *.net
+data/*.root
+/workdir/
 
