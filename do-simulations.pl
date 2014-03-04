@@ -1,59 +1,67 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Thread::Pool::Simple;
 use File::Path qw(make_path rmtree);
 use File::Copy 'cp';
 use Cwd;
-
+use Data::Dumper;
 &main;
 
 sub main {
-  my $pool = Thread::Pool::Simple->new(
-                 min => 2,           # at least 3 workers
-                 max => 2,           # at most 5 workers
-                 load => 10,         # increase worker if on average every worker has 10 jobs waiting
-                 #init => [\&init_handle, $arg1, $arg2, ...]   # run before creating worker thread
-                 #pre => [\&pre_handle, $arg1, $arg2, ...]   # run after creating worker thread
-                 do => [\&do_work],     # job handler for each worker
-                 #post => [\&post_handle, $arg1, $arg2, ...] # run before worker threads end
-                 passid => 1,        # whether to pass the job id as the first argument to the &do_handle
-                 lifespan => 10000,  # total jobs handled by each worker
-               );
+  my $params = {
+                'thresh_fast_rel' => [$_[0]],
+                'thresh_slow_rel' => [$_[1]],
+                'amplitude' => [],
+                'risetime' => [],
+                'falltime' => []
+               };
 
-  $pool->add({
-              'thresh_slow_rel' => [20],
-              'thresh_fast_rel' => [20],
-              'amplitude' => [300],
-              'risetime' => [4, 8],
-              'falltime' => [4]
-             });
-  $pool->add({
-              'thresh_slow_rel' => [20],
-              'thresh_fast_rel' => [20],
-              'amplitude' => [300],
-              'risetime' => [4, 8],
-              'falltime' => [8, 10]
-             });
 
-  # wait till all jobs are done
-  $pool->join();
+  for (my $fast=25;$fast<=70;$fast+=15) {
+    for (my $slow=25;$slow<=70;$slow+=15) {
+      for (my $ampl=100;$ampl<=3500;$ampl+=40) {
+        my $params = {
+                      'thresh_fast_rel' => [$fast],
+                      'thresh_slow_rel' => [$slow],
+                      'amplitude' => [$ampl],
+                      'risetime' => [],
+                      'falltime' => []
+                     };
+        for (my $rise=5;$rise<=14;$rise+=3) { 
+          push(@{$params->{risetime}}, $rise);
+        }
+        for (my $fall=10;$fall<=25;$fall+=5) {
+          push(@{$params->{falltime}}, $fall);
+        }
+        do_work($params);
+      }
+    }
+  }
 }
 
-
 sub do_work {
-  my $id = shift;
   my $params = shift;
-  my $workdir = "workdir/$id";
-  print "Starting job $id...\n";
+  my $workdir = "workdir/single";
+  my $id = make_params_string($params);
+  print "Running $id...\n";
   prepare_workdir($workdir);
   create_asc_file($workdir, $params);
   run_ltspice($workdir);
   save_results($workdir, $params);
-  print "Finished job $id...\n";
+  print "Finished $id\n";
 }
 
 
+sub make_params_string {
+  my $params = shift;
+  return
+    sprintf('%03.1f-%03.1f-%04.1f-%03.1f-%03.1f',
+            $params->{thresh_fast_rel}->[0],
+            $params->{thresh_slow_rel}->[0],
+            $params->{amplitude}->[0],
+            $params->{risetime}->[0],
+            $params->{falltime}->[0]);
+}
 
 sub save_results {
   my $workdir = shift;
@@ -63,15 +71,11 @@ sub save_results {
   unless(-d $savedir) {
     make_path($savedir);
   }
-  my $date = '2014-03-04-12:00:00'; # Time::Piece::localtime->strftime('%F-%T');
+  my $date = '2014-03-04-14:00:00'; # Time::Piece::localtime->strftime('%F-%T');
   my $filename =
-    sprintf('%s-%s-%03.1f-%03.1f-%04.1f-%03.1f-%03.1f',
+    sprintf('%s-%s-%s',
             $tag, $date,
-            $params->{thresh_fast_rel}->[0],
-            $params->{thresh_slow_rel}->[0],
-            $params->{amplitude}->[0],
-            $params->{risetime}->[0],
-            $params->{falltime}->[0]);
+            make_params_string($params));
   for(qw(log raw)) {
     cp "$workdir/padiwa-amps.$_","$savedir/$filename.$_" or die "can't copy $_ results: $!";
   }
