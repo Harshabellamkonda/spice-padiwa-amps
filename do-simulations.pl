@@ -10,18 +10,40 @@ use Cwd;
 
 sub main {
   my $workdir = 'workdir/bla';
+  my $params = {
+                'thresh_slow_rel' => [20],
+                'thresh_fast_rel' => [20],
+                'amplitude' => [300],
+                'risetime' => [4, 8],
+                'falltime' => [1]
+               };
   prepare_workdir($workdir);
-  create_asc_file($workdir,
-                  {
-                   'thresh_slow_rel' => [20],
-                   'thresh_fast_rel' => [20],
-                   'amplitude' => [300],
-                   'risetime' => [4, 8],
-                   'falltime' => [1]
-                  });
+  create_asc_file($workdir, $params);
   run_ltspice($workdir);
+  save_results($workdir, $params);
 }
 
+sub save_results {
+  my $workdir = shift;
+  my $params = shift;
+  my $tag = 'simu2';
+  my $savedir = "data/$tag";
+  unless(-d $savedir) {
+    make_path($savedir);
+  }
+  my $date = '2014-03-04-12:00:00'; # Time::Piece::localtime->strftime('%F-%T');
+  my $filename =
+    sprintf('%s-%s-%03.1f-%03.1f-%04.1f-%03.1f-%03.1f',
+            $tag, $date,
+            $params->{thresh_fast_rel}->[0],
+            $params->{thresh_slow_rel}->[0],
+            $params->{amplitude}->[0],
+            $params->{risetime}->[0],
+            $params->{falltime}->[0]);
+  for(qw(log raw)) {
+    cp "$workdir/padiwa-amps.$_","$savedir/$filename.$_" or die "can't copy $_ results: $!";
+  }
+}
 
 sub run_ltspice {
   my $workdir = shift;
@@ -123,6 +145,9 @@ sub create_asc_file {
   }
   if($check{'multivalue'}>3) {
     die "Spice does not support stepping more than three parameters";
+  }
+  if($check{'multivalue'}==0) {
+    die "At least one parameter should be stepped to generate a parsable logfile...";
   }
 }
 
