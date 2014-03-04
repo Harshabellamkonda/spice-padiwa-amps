@@ -9,19 +9,51 @@ use Cwd;
 &main;
 
 sub main {
-  my $workdir = 'workdir/bla';
-  my $params = {
-                'thresh_slow_rel' => [20],
-                'thresh_fast_rel' => [20],
-                'amplitude' => [300],
-                'risetime' => [4, 8],
-                'falltime' => [1]
-               };
+  my $pool = Thread::Pool::Simple->new(
+                 min => 2,           # at least 3 workers
+                 max => 2,           # at most 5 workers
+                 load => 10,         # increase worker if on average every worker has 10 jobs waiting
+                 #init => [\&init_handle, $arg1, $arg2, ...]   # run before creating worker thread
+                 #pre => [\&pre_handle, $arg1, $arg2, ...]   # run after creating worker thread
+                 do => [\&do_work],     # job handler for each worker
+                 #post => [\&post_handle, $arg1, $arg2, ...] # run before worker threads end
+                 passid => 1,        # whether to pass the job id as the first argument to the &do_handle
+                 lifespan => 10000,  # total jobs handled by each worker
+               );
+
+  $pool->add({
+              'thresh_slow_rel' => [20],
+              'thresh_fast_rel' => [20],
+              'amplitude' => [300],
+              'risetime' => [4, 8],
+              'falltime' => [4]
+             });
+  $pool->add({
+              'thresh_slow_rel' => [20],
+              'thresh_fast_rel' => [20],
+              'amplitude' => [300],
+              'risetime' => [4, 8],
+              'falltime' => [8, 10]
+             });
+
+  # wait till all jobs are done
+  $pool->join();
+}
+
+
+sub do_work {
+  my $id = shift;
+  my $params = shift;
+  my $workdir = "workdir/$id";
+  print "Starting job $id...\n";
   prepare_workdir($workdir);
   create_asc_file($workdir, $params);
   run_ltspice($workdir);
   save_results($workdir, $params);
+  print "Finished job $id...\n";
 }
+
+
 
 sub save_results {
   my $workdir = shift;
@@ -43,6 +75,7 @@ sub save_results {
   for(qw(log raw)) {
     cp "$workdir/padiwa-amps.$_","$savedir/$filename.$_" or die "can't copy $_ results: $!";
   }
+  rmtree($workdir) or die "can't clean $workdir: $!";
 }
 
 sub run_ltspice {
