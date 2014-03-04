@@ -2,21 +2,32 @@
 use strict;
 use warnings;
 use Thread::Pool::Simple;
-use File::Path qw(make_path);
+use File::Path qw(make_path rmtree);
+use File::Copy;
 
 &main;
 
 sub main {
-  create_asc_file('workdir/bla',
+  my $workdir = 'workdir/bla';
+  prepare_workdir($workdir);
+  create_asc_file($workdir,
                   {
                    'thresh_slow_rel' => [20],
                    'thresh_fast_rel' => [20],
                    'amplitude' => [100, 200],
-                   'risetime' => [100, 200],
-                   'falltime' => [100, 200]
+                   'risetime' => [1, 4, 8],
+                   'falltime' => [1, 4, 8 ]
                   });
 }
 
+sub prepare_workdir {
+  my $workdir = shift;
+  rmtree($workdir);
+  make_path($workdir);
+  while(my $lib = <*.lib>) {
+    copy $lib,"$workdir/$lib" or die "can't copy $lib: $!";
+  }
+}
 
 sub create_asc_file {
   my $workdir = shift;
@@ -33,7 +44,7 @@ sub create_asc_file {
      'risetime' => 'n',        # ns
      'falltime' => 'n'         # ns
     };
-  my %check; 
+  my %check = ('multivalue' => 0, '.step' => 0, '.param' => 0);
   while(my $line = <$fh_in>) {
     unless($line =~ /^TEXT/ &&
            $line =~ /(.*?!);?(\.step|\.param)(.*?)$/) {
@@ -46,7 +57,7 @@ sub create_asc_file {
     my $rest = $3;
     $rest =~ s/^\s+|\s+$//g; # trim whitespace
     # extract the param, then skip
-    # uninteresting ones...
+    # uninteresting params...
     my $param;
     if($cmd eq '.step' &&
        $rest =~ /^param\s+(\w+)/) {
@@ -63,16 +74,38 @@ sub create_asc_file {
     $check{$cmd}++;
     my @vals = @{$params->{$param}};
     my $unit = $units->{$param} || '';
-    
-    print $cmd," ",$param,"\n";
 
-    print $fh_out $line;
+    # always set param to first value
+    # if single-valued, comment out .step
+    # if multi-valued, set .step to list of values
+    if(@vals>0 && $cmd eq '.param') {
+      $line = $leading.$cmd.' '.$param.'='.$vals[0].$unit;
+    }
+    elsif ($cmd eq '.step') {
+      if(@vals==1) {
+        $line = $leading.';'.$cmd.' '.$rest;
+      }
+      elsif(@vals>1) {
+        $check{'multivalue'}++;
+        $line = $leading.$cmd.' param '.$param.' list ';
+        for(@vals) {
+          $line .= $_.$unit.' ';
+        }
+      }
+    }
+
+
+    # finally print the modified $line
+    print $fh_out "$line\n";
   }
   close $fh_in;
   close $fh_out;
   unless($check{'.param'} == 5 &&
          $check{'.step'} == 5) {
     die "$ascfile does not contain five .param and five .step directives";
+  }
+  if($check{'multivalue'}>3) {
+    die "Spice does not support stepping more than three parameters";
   }
 }
 
