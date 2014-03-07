@@ -17,8 +17,8 @@ sub main {
                };
 
 
-  for (my $fast=25;$fast<=70;$fast+=15) {
-    for (my $slow=25;$slow<=70;$slow+=15) {
+  for (my $fast=25;$fast<=25;$fast+=15) {
+    for (my $slow=25;$slow<=25;$slow+=15) {
       for (my $ampl=100;$ampl<=3500;$ampl+=40) {
         my $params = {
                       'thresh_fast_rel' => [$fast],
@@ -66,17 +66,17 @@ sub make_params_string {
 sub save_results {
   my $workdir = shift;
   my $params = shift;
-  my $tag = 'simu2';
+  my $tag = 'simu3';
   my $savedir = "data/$tag";
   unless(-d $savedir) {
     make_path($savedir);
   }
-  my $date = '2014-03-04-14:00:00'; # Time::Piece::localtime->strftime('%F-%T');
+  my $date = '2014-03-07-16:00:00'; # Time::Piece::localtime->strftime('%F-%T');
   my $filename =
     sprintf('%s-%s-%s',
             $tag, $date,
             make_params_string($params));
-  for(qw(log raw)) {
+  for(qw(log)) {
     cp "$workdir/padiwa-amps.$_","$savedir/$filename.$_" or die "can't copy $_ results: $!";
   }
   rmtree($workdir) or die "can't clean $workdir: $!";
@@ -100,7 +100,7 @@ sub prepare_workdir {
   while(my $lib = <*.lib>) {
     cp $lib,"$workdir/$lib" or die "can't copy $lib: $!";
   }
-  for(qw(ltspice.sh padiwa-amps.plt)) {
+  for(qw(ltspice.sh)) {
     cp $_, "$workdir/$_" or die "can't copy $_: $!";
   }
 }
